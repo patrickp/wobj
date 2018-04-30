@@ -1,0 +1,41 @@
+SUBROUTINE WOBJ.GET(ACTION,NODE,VALUE,RERR)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: get json element value
+*
+* Modified by: Peter Schellenbach, Zumasys
+* Date: January 2018
+* Description: if specified node is an Object or Array, return
+*   a JSON string representation of the node.
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+VALUE=""
+IF NODE="" THEN
+    CALL WOBJ.OBJECT.TOSTRING(VALUE,1) ; * Root object
+    RETURN
+END
+*
+CALL WOBJ.FINDNODE(NODE,NODEPOS,PARTPOS,CHILDPOS,LASTNODE,RERR)
+IF NODEPOS > 0 AND PARTPOS > 0 THEN
+    OBJ.TYPE=JSONOBJECT(JSONOBJECT$NODEPARTS.TYPE)<1,NODEPOS,PARTPOS>
+    BEGIN CASE
+        CASE OBJ.TYPE="O"
+            CALL WOBJ.OBJECT.TOSTRING(VALUE,CHILDPOS)
+        CASE OBJ.TYPE="A"
+            CALL WOBJ.ARRAY.TOSTRING(VALUE,CHILDPOS)
+        CASE 1
+            CALL WOBJ.DECODE.PART(NODEPOS,PARTPOS,VALUE)
+    END CASE
+END ELSE
+    VALUE="" ; * NODE NOT FOUND!
+END
+IF WOBJ.DEBUG THEN PRINT "WOBJ.GET: ":NODE:" NODEPOS=":NODEPOS:" PARTPOS=":PARTPOS:" VALUE=":VALUE
+RETURN
+END

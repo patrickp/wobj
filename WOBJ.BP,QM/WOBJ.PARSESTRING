@@ -1,0 +1,75 @@
+SUBROUTINE WOBJ.PARSESTRING(JSTR,INDEXPOS,PARSESTRING)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: parse json string value
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+PARSESTRING=""
+*
+SAVE.INDEXPOS=INDEXPOS
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+IFQUOTE = JSTR[INDEXPOS,1]
+INDEXPOS+=1
+LEN.JSTR=LEN(JSTR)
+*
+LOOP
+WHILE INDEXPOS > 0 AND INDEXPOS < LEN.JSTR DO
+    C = JSTR[INDEXPOS,1]
+    IF WOBJ.DEBUG > 1 THEN PRINT "PARSESTRING: LOOKING AT (":C:")"
+    BEGIN CASE
+        CASE C = "\"
+            INDEXPOS+=1
+            C=JSTR[INDEXPOS,1]
+            BEGIN CASE
+                CASE C = \"\ OR C = "\" OR C= "/" OR C = "'"
+                    PARSESTRING:=C
+                    INDEXPOS+=1
+                CASE C = "b"
+                    PARSESTRING:=BS
+                    INDEXPOS+=1
+                CASE C = "f"
+                    PARSESTRING:=FF
+                    INDEXPOS+=1
+                CASE C = "n"
+                    PARSESTRING:=LF
+                    INDEXPOS+=1
+                CASE C = "r"
+                    PARSESTRING:=CR
+                    INDEXPOS+=1
+                CASE C = "t"
+                    PARSESTRING:=TB
+                    INDEXPOS+=1
+                CASE C = "u"
+                    INDEXPOS+=1
+                    CODE=JSTR[INDEXPOS,4]
+                    IF CODE[1,2]="00" THEN
+                        PARSESTRING:=ICONV(CODE[3,2],"MX0C");*QM*
+                    END ELSE
+                        PARSESTRING:="_" ;* Poor substitute for invalid Unicode character!
+                        PSERRORS<-1> = "Invalid Unicode character at position ":INDEXPOS-1:" : u":CODE
+                    END
+                    INDEXPOS+=4
+            END CASE
+        CASE C = IFQUOTE
+            INDEXPOS+=1
+            EXIT
+        CASE 1
+            PARSESTRING:=C
+            INDEXPOS+=1
+    END CASE
+REPEAT
+IF C # IFQUOTE THEN
+    * string not terminated!
+    PARSESTRING=""
+    INDEXPOS=SAVE.INDEXPOS
+END
+IF WOBJ.DEBUG THEN PRINT "PARSESTRING: EXITING: ":PARSESTRING
+RETURN
+END

@@ -1,0 +1,25 @@
+SUBROUTINE WOBJ.DECODE.PART(NODEPOS,PARTPOS,VALUE)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: decode json part value
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+PARTENCODING =  JSONOBJECT(JSONOBJECT$NODEPARTS.ENCODING)<1,NODEPOS,PARTPOS>
+PARTVALUE    =  JSONOBJECT(JSONOBJECT$NODEPARTS.VALUE)<1,NODEPOS,PARTPOS>
+*
+BEGIN CASE
+    CASE PARTENCODING="H"
+        VALUE=ICONV(PARTVALUE,"MX0C");*UD*
+    CASE 1
+        VALUE=PARTVALUE
+END CASE
+*
+RETURN
+END

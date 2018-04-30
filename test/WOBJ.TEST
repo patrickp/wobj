@@ -1,0 +1,407 @@
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: WOBJ.TEST - QC Testing tool for WOBJ
+*
+* Modified by: Peter Schellenbach, Zumasys
+* Date: January 2018
+* Description: added more tests
+*
+**********************************************************************
+NUM.TESTS=0
+NUM.FAILS=0
+*
+* Build test json to parse
+*
+JSON =  \{\
+JSON := \ "stringtest":"stringtestvalue",\
+JSON := \ "numbertest": 100.12,\
+JSON := \ "booleantesttrue": True, \
+JSON := \ "booleantestfalse": False \
+JSON := \}\
+*
+* TEST1 - PARSE JSON
+TEST="PARSEJSON"
+GOSUB start.test
+CALL WOBJ(TESTOBJ,"FROMSTRING","",JSON,"",RERR)
+IF RERR<1> THEN
+   TEST.STATUS=0
+   TEST.MSG=RERR<2>
+END ELSE
+    TEST.STATUS=1
+    TEST.MSG="Parsed OK"
+END
+GOSUB end.test
+IF RERR<1> THEN STOP
+*
+* TEST 2 - GetString
+*
+TEST="GetString"
+GOSUB start.test
+CALL WOBJ(TESTOBJ,"GET","stringtest",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="String Found: ":VALUE
+   IF VALUE="stringtestvalue" THEN
+      TEST.STATUS=1
+   END ELSE
+       TEST.STATUS=0
+   END
+END
+GOSUB end.test
+*
+* TEST 3 - GetNumber
+*
+TEST="GetNumber"
+GOSUB start.test
+CALL WOBJ(TESTOBJ,"GET","numbertest",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="Number Found: ":VALUE
+   BEGIN CASE
+      CASE NOT(NUM(VALUE))
+      CASE VALUE=100.12
+        TEST.STATUS=1
+      CASE 1
+   END CASE
+END
+GOSUB end.test
+*
+* TEST 4 - GetBooleanFalse
+*
+TEST="GetBooleanFalse"
+GOSUB start.test
+CALL WOBJ(TESTOBJ,"GET","booleantestfalse",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="Boolean Found: ":VALUE
+   TEST.STATUS = (VALUE="false")
+END
+GOSUB end.test
+*
+* TEST 5 - GetBooleanTrue
+*
+TEST="GetBooleanTrue"
+GOSUB start.test
+CALL WOBJ(TESTOBJ,"GET","booleantesttrue",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="Boolean Found: ":VALUE
+   TEST.STATUS = (VALUE="true")
+END
+GOSUB end.test
+*
+* TEST 6 - GetRoot
+*
+TEST="GetRoot"
+GOSUB start.test
+CALL WOBJ(TESTOBJ,"GET","",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="Root Object: ":VALUE
+   TEST.STATUS = (DOWNCASE(CHANGE(VALUE," ",""))=DOWNCASE(CHANGE(JSON," ","")))
+END
+GOSUB end.test
+*
+* TEST 7 - SetString
+*
+TEST="SetString"
+GOSUB start.test
+VALUE="a new value"
+CALL WOBJ(TESTOBJ,"SET.STRING","stringtest",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   CALL WOBJ(TESTOBJ,"GET","stringtest",TEST.VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN
+      TEST.MSG="New value set: ":VALUE
+      TEST.STATUS = (VALUE=TEST.VALUE)
+   END
+END
+GOSUB end.test
+*
+* TEST 8 - SetNumber
+*
+TEST="SetNumber"
+GOSUB start.test
+VALUE=200.24
+CALL WOBJ(TESTOBJ,"SET.NUMBER","numbertest",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   CALL WOBJ(TESTOBJ,"GET","numbertest",TEST.VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN
+      TEST.MSG="New value set: ":VALUE
+      TEST.STATUS = (VALUE=TEST.VALUE)
+   END
+END
+GOSUB end.test
+*
+* TEST 9 - SetBooleanFalse
+*
+TEST="SetBooleanFalse"
+GOSUB start.test
+VALUE="FALSE"
+CALL WOBJ(TESTOBJ,"SET.BOOLEAN","booleantest",VALUE,"",RERR)
+GOSUB process.error
+IF RERR<1> <= 1 THEN
+   CALL WOBJ(TESTOBJ,"GET","booleantest",TEST.VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN
+      TEST.MSG="New value set: ":VALUE
+      TEST.STATUS = (DOWNCASE(VALUE)=DOWNCASE(TEST.VALUE))
+   END
+END
+GOSUB end.test
+*
+* TEST 10 - SetBooleanTrue
+*
+TEST="SetBooleanTrue"
+GOSUB start.test
+VALUE="TRUE"
+CALL WOBJ(TESTOBJ,"SET.BOOLEAN","booleantest",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   CALL WOBJ(TESTOBJ,"GET","booleantest",TEST.VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN
+      TEST.MSG="New value set: ":VALUE
+      TEST.STATUS = (DOWNCASE(VALUE)=DOWNCASE(TEST.VALUE))
+   END
+END
+GOSUB end.test
+*
+* TEST 11 - SetNull
+*
+TEST="SetNull"
+GOSUB start.test
+VALUE=""
+CALL WOBJ(TESTOBJ,"SET.NULL","nulltest",VALUE,"",RERR)
+GOSUB process.error
+IF RERR<1> <= 1 THEN
+   CALL WOBJ(TESTOBJ,"GET","nulltest",TEST.VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN
+      TEST.MSG="New value set: ":VALUE
+      TEST.STATUS = (VALUE=TEST.VALUE)
+   END
+END
+GOSUB end.test
+*
+* TEST 12 - SetObject
+*
+TEST="SetObject"
+GOSUB start.test
+VALUE=\{"A":1, "B":"two", "C":"true", "D":[1,2,3]}\
+CALL WOBJ(TESTOBJ,"SET.OBJECT","objtest",VALUE,"",RERR)
+GOSUB process.error
+IF RERR<1> <= 1 THEN
+   CALL WOBJ(TESTOBJ,"GET","objtest",TEST.VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN   
+      TEST.MSG="New Object: ":VALUE
+      TEST.STATUS = (DOWNCASE(CHANGE(VALUE," ",""))=DOWNCASE(CHANGE(TEST.VALUE," ","")))
+   END
+END
+GOSUB end.test
+*
+* TEST 13 - SetNested
+*
+TEST="SetNested"
+GOSUB start.test
+VALUE="Bee"
+CALL WOBJ(TESTOBJ,"SET.STRING","objtest.B",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   CALL WOBJ(TESTOBJ,"GET","objtest.B",TEST.VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN   
+      TEST.MSG="New Value: ":VALUE
+      TEST.STATUS = (VALUE=TEST.VALUE)
+   END
+END
+GOSUB end.test
+*
+* TEST 14 - GetArray
+*
+TEST="GetArray"
+GOSUB start.test
+VALUE=""
+CALL WOBJ(TESTOBJ,"GET","objtest.D",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="Array Value: ":VALUE
+   TEST.STATUS = (CHANGE(VALUE," ","")="[1,2,3]")
+END
+GOSUB end.test
+*
+* TEST 15 - SetArrayElement
+*
+TEST="SetArrayElement"
+GOSUB start.test
+VALUE=5
+CALL WOBJ(TESTOBJ,"SET.NUMBER","objtest.D[1]",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   CALL WOBJ(TESTOBJ,"GET","objtest.D[1]",TEST.VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN   
+      TEST.MSG="New Value: ":VALUE
+      TEST.STATUS = (VALUE=TEST.VALUE)
+   END
+END
+GOSUB end.test
+*
+* TEST 16 - SetNestedArray
+*
+TEST="SetNestedArray"
+GOSUB start.test
+OUTER.ARRAY="[1,2,3]"
+INNER.ARRAY="[9,8,7]"
+CALL WOBJ(TESTOBJ,"SET.ARRAY","objtest.E",OUTER.ARRAY,"",RERR)
+GOSUB process.error
+IF RERR<1> <= 1 THEN
+   CALL WOBJ(TESTOBJ,"SET.ARRAY","objtest.E[3]",INNER.ARRAY,"",RERR)
+   GOSUB process.error
+   IF RERR<1> <= 1 THEN
+      CALL WOBJ(TESTOBJ,"GET","objtest.E",TEST.VALUE,"",RERR)
+      GOSUB process.error
+      IF NOT(RERR<1>) THEN
+         TEST.MSG="New Value: ":TEST.VALUE
+         TEST.STATUS = (TEST.VALUE="[1, 2, 3, [9, 8, 7]]")
+      END
+   END   
+END
+GOSUB end.test
+*
+* TEST 17 - NestedArrayElement
+*
+TEST="NestedArrayElement"
+GOSUB start.test
+CALL WOBJ(TESTOBJ,"GET","objtest.E[3][2]",TEST.VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="New Value: ":TEST.VALUE
+   TEST.STATUS = (TEST.VALUE=7)
+END
+GOSUB end.test
+*
+* TEST 18 - DeleteProperty
+*
+TEST="DeleteProperty"
+GOSUB start.test
+VALUE=""
+BEFORE.VALUE=0
+AFTER.VALUE=0
+CALL WOBJ(TESTOBJ,"LENGTH","objtest",BEFORE.VALUE,"",RERR)
+CALL WOBJ(TESTOBJ,"DELETE","objtest.C",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   CALL WOBJ(TESTOBJ,"LENGTH","objtest",AFTER.VALUE,"",RERR)
+   TEST.MSG="Length: before=":BEFORE.VALUE:", after=":AFTER.VALUE
+   TEST.STATUS = (BEFORE.VALUE=(AFTER.VALUE+1))
+END
+GOSUB end.test
+*
+* TEST 19 - DeleteArrayElement
+*
+TEST="DeleteArrayElement"
+GOSUB start.test
+VALUE=""
+CALL WOBJ(TESTOBJ,"DELETE","objtest.D[1]",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   CALL WOBJ(TESTOBJ,"GET","objtest.D",VALUE,"",RERR)
+   GOSUB process.error
+   IF NOT(RERR<1>) THEN
+      TEST.MSG="Array Value: ":VALUE
+      TEST.STATUS = (CHANGE(VALUE," ","")="[1,3]")
+   END
+END
+GOSUB end.test
+*
+* TEST 20 - Length
+*
+TEST="GetLength"
+GOSUB start.test
+VALUE=""
+CALL WOBJ(TESTOBJ,"LENGTH","",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="Length: ":VALUE
+   TEST.STATUS = (VALUE=7)
+END
+GOSUB end.test
+*
+* TEST 21 - Keys
+*
+TEST="GetKeys"
+GOSUB start.test
+VALUE=""
+CALL WOBJ(TESTOBJ,"KEYS","",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.VALUE=CHANGE(VALUE,@SVM,",")
+   TEST.MSG="Keys: ":TEST.VALUE
+   TEST.STATUS = (TEST.VALUE="stringtest,numbertest,booleantesttrue,booleantestfalse,booleantest,nulltest,objtest")
+END
+GOSUB end.test
+*
+* TEST 22 - Type
+*
+TEST="GetType"
+GOSUB start.test
+VALUE=""
+CALL WOBJ(TESTOBJ,"TYPE","objtest.D",VALUE,"",RERR)
+GOSUB process.error
+IF NOT(RERR<1>) THEN
+   TEST.MSG="Type: ":VALUE
+   TEST.STATUS = (VALUE="ARRAY")
+END
+GOSUB end.test
+*
+* TEST 23 - UndefinedType
+*
+TEST="GetUndefined"
+GOSUB start.test
+VALUE=""
+CALL WOBJ(TESTOBJ,"TYPE","objtest.Z",VALUE,"",RERR)
+GOSUB process.error
+IF RERR<1> <= 1 THEN
+   TEST.MSG="Type: ":VALUE
+   TEST.STATUS = (VALUE="UNDEFINED")
+END
+GOSUB end.test
+*
+PRINT
+IF NUM.FAILS THEN
+    PRINT @(-13):"* * * Some tests failed * * *":@(-14)
+    PRINT
+END
+PRINT "Number of tests completed: ":NUM.TESTS:", passed: ":(NUM.TESTS-NUM.FAILS):", failed: ":NUM.FAILS
+STOP
+*
+process.error: *
+IF RERR<1> THEN
+   TEST.STATUS=-1
+   TEST.MSG=RERR<2>
+END
+RETURN
+*
+start.test: *
+TEST.STATUS=0
+TEST.MSG="Success"
+PRINT "Test: ":TEST[1,18]"L(#18)":
+RETURN
+*
+end.test: *
+PRINT " ":TEST.MSG[1,45]"L(#45)":
+PRINT " ":
+IF TEST.STATUS THEN PRINT "[Ok    ]" ELSE PRINT @(-13):"[Failed]":@(-14)
+NUM.TESTS+=1
+IF NOT(TEST.STATUS) THEN NUM.FAILS+=1
+RETURN
+END

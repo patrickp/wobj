@@ -1,0 +1,114 @@
+SUBROUTINE WOBJ.FINDNODE(INNODE,NODEPOS,PARTPOS,CHILDPOS,LASTNODE,RERR)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: find a json node in parsed object structure
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+* NEED TO BREAK OUR NODE REQUEST UP INTO IT'S SEPERATE PARTS
+*
+RERR=""
+LASTNODE=""
+*
+OBJECT.SEPERATOR = "."
+NODES=INNODE
+CONVERT OBJECT.SEPERATOR TO @AM IN NODES
+*
+NODEPOS=1; * WE ALWAYS START WITH THE FIRST ONE.
+PARTPOS=0; * START AS ZERO 6/19/2017 - PAP
+CHILDPOS=0;* SET WHEN OUR NODE IS AN OBJECT OR ARRAY
+PARTTYPE=""
+*
+NUMBER.NODES=DCOUNT(NODES,@AM)
+IF INDEX(NODES,"[",1) THEN
+* We need to trick this into seeing an array as another node level
+    ORIG.NODES=NODES
+    NODES=""
+    FOR A=1 TO NUMBER.NODES
+        NODE=ORIG.NODES<A>
+        IF INDEX(NODE,"[",1) THEN
+            NUMBER.ARRAYS = COUNT(NODE,"[")
+            ACTUAL.NODE=FIELD(NODE,"[",1)
+            NODES<-1>=ACTUAL.NODE
+            FOR B=1 TO NUMBER.ARRAYS
+                K=INDEX(NODE,"]",B)
+                NODES<-1>=NODE[1,K]
+            NEXT B
+        END ELSE
+            NODES<-1>=NODE
+        END
+    NEXT A
+END
+NUMBER.NODES=DCOUNT(NODES,@AM)
+IF WOBJ.DEBUG THEN PRINT "WOBJ.FINDNODE: number of parts in ":INNODE:": ":NUMBER.NODES
+FOR A=1 TO NUMBER.NODES
+    NODE=NODES<A>
+    LASTNODE=NODE
+    NODETYPE=JSONOBJECT(JSONOBJECT$NODETYPE)<1,NODEPOS>
+    IF WOBJ.DEBUG THEN PRINT "  part ":A:" key=":NODE:" pos=":NODEPOS:" type=":NODETYPE
+    BEGIN CASE
+        CASE NODETYPE="O"
+            JUSTNODE=FIELD(NODE,"[",1)
+            IF WOBJ.DEBUG THEN
+                PRINT "    locating ":JUSTNODE
+                PRINT "          in ":JSONOBJECT(JSONOBJECT$NODEPARTS.KEY)<1,NODEPOS>
+            END
+            LOCATE JUSTNODE IN JSONOBJECT(JSONOBJECT$NODEPARTS.KEY)<1,NODEPOS> SETTING PARTPOS ELSE PARTPOS=0
+        CASE NODETYPE="A"
+            NUMBER.ARRAYS=COUNT(NODE,"[")
+            ST=INDEX(NODE,"[",NUMBER.ARRAYS)
+            EN=INDEX(NODE,"]",NUMBER.ARRAYS)
+            IF ST>1 AND EN>ST THEN
+                PARTPOS=NODE[ST+1,EN-ST-1]
+            END ELSE
+                PARTPOS=''
+            END
+            IF NOT((PARTPOS MATCHES '1N0N') OR (PARTPOS = '-1')) THEN
+                RERR=2
+                RERR<2>="Numeric subscript required for array element"
+                IF WOBJ.DEBUG THEN PRINT "WOBJ.FINDNODE: ":RERR<2>
+                RETURN
+            END
+            IF PARTPOS<0 THEN PARTPOS=JSONOBJECT(JSONOBJECT$NODELENGTH)<1,NODEPOS> ;* ALLOW -1, SINCE WOBJ.SET USES THAT TO CREATE NEXT ELEMENT
+            PARTPOS += 1
+            IF PARTPOS > JSONOBJECT(JSONOBJECT$NODELENGTH)<1,NODEPOS> THEN
+                IF WOBJ.DEBUG THEN PRINT "WOBJ.FINDNODE: PARTPOS=":PARTPOS:" LEN=":JSONOBJECT(JSONOBJECT$NODELENGTH)<1,NODEPOS>:" NODEPOS=":NODEPOS
+                PARTPOS=0
+            END
+    END CASE
+    IF NOT(PARTPOS) THEN
+        RERR=1
+        RERR<2>="Node ":NODE:" not found at level ":NODEPOS
+        IF WOBJ.DEBUG THEN PRINT "WOBJ.FINDNODE: ":RERR<2>
+        RETURN
+    END
+    PARTTYPE=JSONOBJECT(JSONOBJECT$NODEPARTS.TYPE)<1,NODEPOS,PARTPOS>
+    IF (PARTTYPE="A" OR PARTTYPE="O") THEN
+        IF A=NUMBER.NODES THEN
+* RETURN CHILD OBJECT NODE POSITION
+            CHILDPOS=JSONOBJECT(JSONOBJECT$NODEPARTS.FLINK)<1,NODEPOS,PARTPOS>
+        END ELSE
+* FOLLOW FORWARD LINK TO CHILD NODE
+            NODEPOS=JSONOBJECT(JSONOBJECT$NODEPARTS.FLINK)<1,NODEPOS,PARTPOS>
+        END
+    END ELSE
+        IF A<>NUMBER.NODES THEN
+            RERR=1
+            RERR<2>="Node ":NODE:" not found at level ":NODEPOS
+            IF WOBJ.DEBUG THEN
+                PRINT "WOBJ.FINDNODE: ":RERR<2>
+                PRINT "    Node type ":PARTTYPE:" cannot have properties or array elements"
+            END
+            RETURN
+        END
+    END
+NEXT A
+IF WOBJ.DEBUG THEN PRINT "WOBJ.FINDNODE: nodepos=":NODEPOS:" partpos=":PARTPOS:" type=":PARTTYPE:" childpos=":CHILDPOS
+RETURN
+END

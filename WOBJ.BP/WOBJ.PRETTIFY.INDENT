@@ -1,0 +1,21 @@
+SUBROUTINE WOBJ.PRETTIFY.INDENT(JSON,POS)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: indent json string
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+INDENTSTEP=2
+*
+IF PRETTIFY THEN
+    JSON:=STR(" ",(INDENT.DEPTH*INDENTSTEP))
+END
+*
+RETURN
+END

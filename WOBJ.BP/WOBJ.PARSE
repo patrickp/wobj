@@ -1,0 +1,42 @@
+SUBROUTINE WOBJ.PARSE(JSTR,JSONOBJECTRETURN)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: parse json string into object
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+PSERRORS=""
+MAT JSONOBJECT=""
+JSONOBJECTRETURN=""
+*
+INDEXPOS=1
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+C=JSTR[INDEXPOS,1]
+IF C # "{" THEN
+    IF C # "" THEN
+        PSERRORS<-1>="Leading brace for JSON object missing"
+    END
+    RETURN
+END
+*
+CALL WOBJ.PARSEOBJECT(JSTR,INDEXPOS,PARSERESULT)
+IF PARSERESULT="" THEN
+    IF PSERRORS="" THEN PSERRORS<-1>="Parse failure"
+END ELSE
+    * MAKE SURE WE CONSUMED ENTIRE JSTR
+    CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+    IF INDEXPOS <= LEN(JSTR) THEN
+        PSERRORS<-1>="Extra data (":(LEN(JSTR)-INDEXPOS+1):" characters) after final close brace ignored"
+    END
+END
+*
+MATBUILD JSONOBJECTRETURN FROM JSONOBJECT
+*
+RETURN
+END

@@ -1,0 +1,32 @@
+SUBROUTINE WOBJ.PARSENULL(JSTR,INDEXPOS,PARSESTRING)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: parse json null keyword
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+PARSESTRING=""
+SAVE.INDEXPOS=INDEXPOS
+*
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+IF OCONV(JSTR[INDEXPOS,4],"MCL") = "null" THEN
+    INDEXPOS+=4
+    CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+    C=JSTR[INDEXPOS,1]
+    IF INDEX(",]}",C,1)=0 THEN
+        * invalid terminator - not null
+    END ELSE
+        PARSESTRING="null"
+        RETURN
+    END
+END
+PARSESTRING=""
+INDEXPOS=SAVE.INDEXPOS
+RETURN
+END

@@ -1,0 +1,38 @@
+SUBROUTINE WOBJ.PARSEBOOLEAN(JSTR,INDEXPOS,PARSESTRING)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: parse json boolean value
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+PARSESTRING=""
+*
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+SAVE.INDEXPOS=INDEXPOS
+BEGIN CASE
+    CASE OCONV(JSTR[INDEXPOS,4],"MCL") = "true"
+        PARSESTRING="true"
+        INDEXPOS+=4
+    CASE OCONV(JSTR[INDEXPOS,5],"MCL") = "false"
+        PARSESTRING="false"
+        INDEXPOS+=5
+    CASE 1
+        * not boolean
+        INDEXPOS=SAVE.INDEXPOS
+        RETURN
+END CASE
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+C=JSTR[INDEXPOS,1]
+IF INDEX(",]}",C,1)=0 THEN
+    * invalid terminator - not boolean
+    PARSESTRING=""
+    INDEXPOS=SAVE.INDEXPOS
+END
+RETURN
+END

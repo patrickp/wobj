@@ -1,0 +1,68 @@
+SUBROUTINE WOBJ.PARSEKEY(JSTR,INDEXPOS,PARSEKEY)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: parse json property key
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+PARSEKEY=""
+IF WOBJ.DEBUG THEN PRINT "PARSEKEY: ENTERING ":INDEXPOS
+*
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+*
+LEN.JSTR = LEN(JSTR)
+*
+IFDQUOTE = 0
+IFSQUOTE = 0
+
+LOOP
+WHILE INDEXPOS > 0 AND INDEXPOS <= LEN.JSTR DO
+    C = JSTR[INDEXPOS,1]
+    IF WOBJ.DEBUG > 0 THEN PRINT "PARSEKEY: ":INDEXPOS,C,SEQ(C),PARSEKEY
+    BEGIN CASE
+        CASE C = '"'
+            IF NOT(IFDQUOTE) THEN IFDQUOTE=1 ELSE IFDQUOTE=0
+            INDEXPOS+=1
+            IF NOT(IFDQUOTE) THEN
+                CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+                IF JSTR[INDEXPOS,1] <> ":" THEN
+                    PSERRORS<-1>="Invalid Key at position ":INDEXPOS:" : ":PARSEKEY
+                    EXIT
+                END
+            END
+        CASE C = "'"
+            IF NOT(IFSQUOTE) THEN IFSQUOTE=1 ELSE IFSQUOTE=0
+            INDEXPOS+=1
+            IF NOT(IFSQUOTE) THEN
+                CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+                IF JSTR[INDEXPOS,1] <> ":" THEN
+                    PSERRORS<-1>="Invalid Key at position ":INDEXPOS:" : ":PARSEKEY
+                    EXIT
+                END
+            END
+        CASE C = ":"
+            INDEXPOS+=1
+            IF NOT(IFDQUOTE) AND NOT(IFSQUOTE) THEN
+                IF WOBJ.DEBUG THEN PRINT "EXITING"
+                EXIT
+            END
+            PARSEKEY:=C
+        CASE 1
+            IF C=LF OR C=CR OR C=TB OR C=" " THEN
+                NULL
+            END ELSE
+                PARSEKEY:=C
+            END
+            INDEXPOS+=1
+    END CASE
+REPEAT
+*
+IF WOBJ.DEBUG THEN PRINT "PARSEKEY: ":PARSEKEY
+RETURN
+END

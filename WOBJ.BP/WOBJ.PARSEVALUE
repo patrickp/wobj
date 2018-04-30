@@ -1,0 +1,75 @@
+SUBROUTINE WOBJ.PARSEVALUE(JSTR,INDEXPOS,PARSEVALUE)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: parse json value
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+PARSEVALUE=""
+*
+IF WOBJ.DEBUG THEN PRINT "PARSEVALUE - STARTING"
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+*
+C=JSTR[INDEXPOS,1]
+LEN.JSTR=LEN(JSTR)
+*
+IF WOBJ.DEBUG THEN PRINT "PARSEVALUE LOOKING AT ":C
+*
+* WE WILL BE ADDING A NEW ITEM TO OUR OBJECT ARRAY
+*
+BEGIN CASE
+    CASE C="{"
+        CALL WOBJ.PARSEOBJECT(JSTR,INDEXPOS,PARSEVALUE)
+    CASE C="["
+        IF WOBJ.DEBUG THEN PRINT "PARSEVALUE CALLING PARSEARRAY"
+        CALL WOBJ.PARSEARRAY(JSTR,INDEXPOS,PARSEVALUE)
+    CASE C='"' OR C="'"
+        IF WOBJ.DEBUG THEN PRINT "PARSEVALUE - CALLING PARSESTRING"
+        CALL WOBJ.PARSESTRING(JSTR,INDEXPOS,PARSEVALUE)
+        PARSEVALUE=INSERT(PARSEVALUE,1;"S")
+    CASE 1
+        IF C="t" OR C="T" OR C="f" OR C="F" THEN
+            IF WOBJ.DEBUG THEN PRINT "PARSEVALUE - CALLING PARSEBOOLEAN"
+            CALL WOBJ.PARSEBOOLEAN(JSTR,INDEXPOS,PARSEVALUE)
+            IF PARSEVALUE#"" THEN
+                PARSEVALUE=INSERT(PARSEVALUE,1;"B")
+            END
+        END
+        IF PARSEVALUE="" AND (C="n" OR C="N") THEN
+            IF WOBJ.DEBUG THEN PRINT "PARSEVALUE - CALLING PARSENULL"
+            CALL WOBJ.PARSENULL(JSTR,INDEXPOS,PARSEVALUE)
+            IF PARSEVALUE#"" THEN
+                 PARSEVALUE=INSERT(PARSEVALUE,1;"N")
+            END
+        END
+        IF PARSEVALUE="" THEN
+            IF WOBJ.DEBUG THEN PRINT "PARSEVALUE - CALLING PARSENUMBER"
+            CALL WOBJ.PARSENUMBER(JSTR,INDEXPOS,PARSEVALUE)
+            IF PARSEVALUE#"" THEN
+                PARSEVALUE=INSERT(PARSEVALUE,1;"D")
+            END
+        END
+        IF PARSEVALUE="" THEN
+            * Treat unidentified value as string
+            LOOP
+            WHILE INDEXPOS > 0 AND INDEXPOS < LEN.JSTR DO
+                C = JSTR[INDEXPOS,1]
+                IF INDEX(",]}",C,1) THEN
+                    EXIT
+                END
+                PARSEVALUE:=C
+                INDEXPOS+=1
+            REPEAT
+            PARSEVALUE=INSERT(PARSEVALUE,1;"S")
+        END
+END CASE
+IF WOBJ.DEBUG THEN PRINT "PARSEVALUE - END OF ROUTINE"
+*
+RETURN
+END

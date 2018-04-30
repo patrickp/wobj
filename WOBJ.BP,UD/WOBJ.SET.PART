@@ -1,0 +1,119 @@
+SUBROUTINE WOBJ.SET.PART(NODEPOS,PARTPOS,PARTTYPE,PARTKEY,VALUE,RERR)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: set json part value
+*
+* Modified by: Peter Schellenbach, Zumasys
+* Date: January 2018
+* Description: allow Object and Array properties to be set, passing
+*   a JSON string representation of the node.
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+ENCODING=""
+FLINK=""
+* VALIDATE THE VALUE DATA
+BEGIN CASE
+    CASE PARTTYPE="O"
+        IF VALUE="" THEN
+            OUT.VALUE="{}"
+        END ELSE
+            OUT.VALUE=VALUE
+        END
+    CASE PARTTYPE="A"
+        IF VALUE="" THEN
+            OUT.VALUE="[]"
+        END ELSE
+            OUT.VALUE=VALUE
+        END    
+    CASE PARTTYPE="N"
+        OUT.VALUE=""
+        IF VALUE#"" THEN
+            RERR=1
+            RERR<2>="Value ignored for NULL property"
+        END
+    CASE PARTTYPE="D"
+        OUT.VALUE=VALUE
+        IF VALUE="" THEN
+            OUT.VALUE=0
+        END ELSE
+            IF NOT(NUM(VALUE)) THEN
+                RERR=1
+                RERR<2>="Non-numeric value for NUMBER property; zero used"
+                OUT.VALUE=0
+            END
+        END
+    CASE PARTTYPE="B"
+        OUT.VALUE=OCONV(VALUE,"MCL")
+        IF OUT.VALUE#"true" AND OUT.VALUE#"false" THEN
+            RERR=1
+            RERR<2>="Invalid boolean value: must be true or false; false used"
+            OUT.VALUE="false"
+        END        
+    CASE 1
+        ENCODING="H"
+        BEGIN CASE
+            CASE INDEX(VALUE,@AM,1)
+            CASE INDEX(VALUE,@VM,1)
+            CASE INDEX(VALUE,@SVM,1)
+            CASE INDEX(VALUE,LF,1)
+            CASE INDEX(VALUE,CR,1)
+            CASE 1
+                ENCODING="A"
+        END CASE
+        IF ENCODING="H" THEN
+            OUT.VALUE=OCONV(VALUE,"MX0C");*UD*
+        END ELSE
+                OUT.VALUE=VALUE
+        END
+END CASE
+*
+IF PARTTYPE="O" OR PARTTYPE="A" THEN
+* SET UP THE NEW OBJECT
+    FLINK=JSONOBJECT(JSONOBJECT$NODECNTR)+1
+* PARSE OBJECT OR ARRAY        
+    MATBUILD SAVEJSONOBJECT FROM JSONOBJECT ; * SAVE CURRENT OBJECT IN CASE OF PARSE FAILURE
+    INDEXPOS=1
+    IF PARTTYPE="O" THEN
+        CALL WOBJ.PARSEOBJECT(OUT.VALUE,INDEXPOS,PARSERESULT)
+    END ELSE
+        CALL WOBJ.PARSEARRAY(OUT.VALUE,INDEXPOS,PARSERESULT)
+    END
+    IF PARSERESULT="" THEN
+        RERR=2
+        IF PARTTYPE="O" THEN
+            RERR<2>="Object parse failure"
+        END ELSE
+            RERR<2>="Array parse failure"
+        END
+    END ELSE
+* MAKE SURE WE CONSUMED ENTIRE JSTR
+        CALL WOBJ.SKIPCHAR(OUT.VALUE,INDEXPOS)
+        IF INDEXPOS <= LEN(OUT.VALUE) THEN
+            RERR=2
+            RERR<2>="Extra data (":(LEN(OUT.VALUE)-INDEXPOS+1):" characters) after final close brace ignored"
+        END            
+    END
+    IF RERR<1> >= 2 THEN
+* OBJECT OR ARRAY PARSE ERROR
+        MATPARSE JSONOBJECT FROM SAVEJSONOBJECT
+        PARTTYPE="N"
+        FLINK=""
+    END
+END
+* SET THE PART PROPERTIES
+JSONOBJECT(JSONOBJECT$NODEPARTS.TYPE)<1,NODEPOS,PARTPOS>        =    PARTTYPE
+JSONOBJECT(JSONOBJECT$NODEPARTS.KEY)<1,NODEPOS,PARTPOS>         =    PARTKEY
+JSONOBJECT(JSONOBJECT$NODEPARTS.VALUE)<1,NODEPOS,PARTPOS>       =    OUT.VALUE
+JSONOBJECT(JSONOBJECT$NODEPARTS.ENCODING)<1,NODEPOS,PARTPOS>    =    ENCODING
+JSONOBJECT(JSONOBJECT$NODEPARTS.FLINK)<1,NODEPOS,PARTPOS>       =    FLINK
+IF WOBJ.DEBUG THEN PRINT "WOBJ.SET.PART: T=":PARTTYPE:" K=":PARTKEY:" E=":ENCODING:" OUT.VALUE=":OUT.VALUE
+*
+RETURN
+END

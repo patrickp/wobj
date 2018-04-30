@@ -1,0 +1,21 @@
+SUBROUTINE WOBJ.NUMBER.TOSTRING(JSON,NODEPOS,PARTPOS)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: convert json number to string
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+CALL WOBJ.DECODE.PART(NODEPOS,PARTPOS,VALUE)
+*
+CALL WOBJ.ENCODE(VALUE,OUT.VALUE)
+JSON:=OUT.VALUE
+*
+IF WOBJ.DEBUG THEN PRINT "N=":NODEPOS:" P=":PARTPOS:" V=":VALUE
+RETURN
+END

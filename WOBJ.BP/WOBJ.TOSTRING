@@ -1,0 +1,25 @@
+SUBROUTINE WOBJ.TOSTRING(JSON)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: internal convert json object to string
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+POS=1
+OBJ.TYPE=JSONOBJECT(JSONOBJECT$NODETYPE)<1,POS>
+IF OBJ.TYPE="" OR POS > JSONOBJECT$NODECNTR THEN RETURN
+IF WOBJ.DEBUG THEN PRINT "FIRST OBJECT=":OBJ.TYPE
+BEGIN CASE
+    CASE OBJ.TYPE="A"
+        CALL WOBJ.ARRAY.TOSTRING(JSON,POS)
+    CASE OBJ.TYPE="O"
+        CALL WOBJ.OBJECT.TOSTRING(JSON,POS)
+END CASE
+RETURN
+END

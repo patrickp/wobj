@@ -1,0 +1,18 @@
+SUBROUTINE WOBJ.NULL.TOSTRING(JSON,NODEPOS,PARTPOS)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: json null to string
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+JSON:="null"
+*
+IF WOBJ.DEBUG THEN PRINT "N=":NODEPOS:" P=":PARTPOS:" V=null"
+RETURN
+END

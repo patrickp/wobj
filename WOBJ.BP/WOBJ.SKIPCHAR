@@ -1,0 +1,21 @@
+SUBROUTINE WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: skip all whitespace
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+WS = " ()":TB:CR:LF:@AM
+LEN.JSTR=LEN(JSTR)
+LOOP WHILE INDEXPOS <= LEN.JSTR DO
+    IF INDEX(WS,JSTR[INDEXPOS,1],1) = 0 THEN EXIT
+    INDEXPOS += 1
+REPEAT
+RETURN
+END

@@ -1,0 +1,38 @@
+SUBROUTINE WOBJ.PARSENUMBER(JSTR,INDEXPOS,PARSESTRING)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: parse json numeric value
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+PARSESTRING=""
+*
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+SAVE.INDEXPOS=INDEXPOS
+*
+JSTR.LENGTH=LEN(JSTR)
+*
+LOOP WHILE INDEXPOS > 0 AND INDEXPOS <= JSTR.LENGTH DO
+    C=JSTR[INDEXPOS,1]
+    IF NUM(C) OR C="+" OR C="-" OR C="." OR C="E" OR C="e" THEN
+        PARSESTRING:=C
+        INDEXPOS+=1
+    END ELSE
+        EXIT
+    END
+REPEAT
+CALL WOBJ.SKIPCHAR(JSTR,INDEXPOS)
+C=JSTR[INDEXPOS,1]
+IF INDEX(",]}",C,1)=0 THEN
+    * invalid terminator - not a number
+    PARSESTRING=""
+    INDEXPOS=SAVE.INDEXPOS
+END
+RETURN
+END

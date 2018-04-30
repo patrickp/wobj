@@ -1,0 +1,146 @@
+SUBROUTINE WOBJ(PASSEDOBJ,ACTION,NODE,VALUE,OPTIONS,RERR)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: WOBJ json library main routine
+*
+* Updated: 2/28/2018 by Peter Schellenbach, Zumasys
+*  Clean up for release.
+*
+* Updated: 4/30/2018 by Peter Schellenbach, Zumasys
+*  Fixed bad CASE construct in WOBJ.SET.PART (caused unassigned variable
+*  for SET.STRING action if value contained system delimiter or CR or LF.
+*
+**********************************************************************
+*
+WOBJ.VERSION = "1.2.1"
+*
+INCLUDE WOBJ.INCLUDE
+*
+IF INDEX(OPTIONS,"PRETTIFY",1) THEN PRETTIFY=1 ELSE PRETTIFY=0
+IF INDEX(OPTIONS,"PRETTIFYCR",1) THEN PRETTIFYCR=1 ELSE PRETTIFYCR=0
+IF INDEX(OPTIONS,"DEBUG",1) THEN WOBJ.DEBUG=1 ELSE WOBJ.DEBUG=0
+*
+MAT JSONOBJECT = ""
+RERR=""
+INDENT.DEPTH=0
+*
+BEGIN CASE
+    CASE ACTION="FROMSTRING"
+* THIS EXISTS EARLIER DUE TO MATPARSE BELOW
+        CALL WOBJ.PARSE(VALUE,NEWOBJ)
+        PASSEDOBJ=NEWOBJ
+        IF PSERRORS#"" THEN
+            RERR=2
+            RERR<2> = PSERRORS
+        END
+        IF WOBJ.DEBUG THEN PRINT "WOBJ: FROMSTRING ACTION: VALUE=":VALUE:" RERR=":RERR<2>
+        RETURN
+    CASE ACTION="VERSION"
+        VALUE=WOBJ.VERSION
+        RETURN
+END CASE
+*
+MATPARSE JSONOBJECT FROM PASSEDOBJ
+*
+IF WOBJ.DEBUG THEN PRINT "ACTION=":ACTION
+BEGIN CASE
+    CASE ACTION="TOSTRING"
+        VALUE=""
+        IF NODE # "" THEN
+            RERR=1
+            RERR<2>="Node ignored - returning the root node"
+            IF WOBJ.DEBUG THEN PRINT "WOBJ: TOSTRING ACTION: NODE ":NODE:" IGNORED"
+        END
+        CALL WOBJ.TOSTRING(VALUE)
+    CASE ACTION="GET"
+        GOSUB action.get
+    CASE FIELD(ACTION,".",1)="SET"
+        GOSUB action.set
+    CASE ACTION="DELETE"
+        GOSUB action.delete
+    CASE ACTION="KEYS"
+        GOSUB action.keys
+    CASE ACTION="LENGTH"
+        GOSUB action.length
+    CASE ACTION="TYPE"
+        GOSUB action.type
+    CASE 1
+        VALUE=""
+        RERR=1
+        RERR<2>="Invalid action '":ACTION:"'"
+        IF WOBJ.DEBUG THEN PRINT "WOBJ: INVALID ACTION: ":ACTION
+END CASE
+*
+MATBUILD PASSEDOBJ FROM JSONOBJECT
+*
+RETURN
+*
+action.get: *
+CALL WOBJ.GET(ACTION,NODE,VALUE,RERR)
+RETURN
+*
+action.set: *
+CALL WOBJ.SET(ACTION,NODE,VALUE,RERR)
+RETURN
+*
+action.delete: *
+CALL WOBJ.DELETE(ACTION,NODE,VALUE,RERR)
+RETURN
+*
+action.keys: *
+CALL WOBJ.KEYS(ACTION,NODE,VALUE,RERR)
+RETURN
+*
+action.length: *
+CALL WOBJ.FINDNODE(NODE,NODEPOS,PARTPOS,CHILDPOS,LASTNODE,RERR)
+IF PARTPOS THEN
+    IF CHILDPOS THEN
+        VALUE=JSONOBJECT(JSONOBJECT$NODELENGTH)<1,CHILDPOS>+0
+    END ELSE
+        VALUE=1 ;* SIMPLE NODE HAS LENGTH OF 1
+    END
+END ELSE
+    IF NODE="" THEN
+        VALUE=JSONOBJECT(JSONOBJECT$NODELENGTH)<1,1>+0
+    END ELSE
+        VALUE=0 ;* NODE NOT FOUND!
+    END
+END
+IF WOBJ.DEBUG THEN PRINT "WOBJ: LENGTH ACTION: ":NODE:" NODEPOS=":NODEPOS:" PARTPOS=":PARTPOS:" CHILDPOS=":CHILDPOS:" LENGTH=":VALUE:" RERR=":RERR<2>
+RETURN
+*
+action.type: *
+CALL WOBJ.FINDNODE(NODE,NODEPOS,PARTPOS,CHILDPOS,LASTNODE,RERR)
+IF PARTPOS THEN
+    PARTTYPE = JSONOBJECT(JSONOBJECT$NODEPARTS.TYPE)<1,NODEPOS,PARTPOS>
+    BEGIN CASE
+        CASE PARTTYPE='O'
+            VALUE='OBJECT'
+        CASE PARTTYPE='A'
+            VALUE='ARRAY'
+        CASE PARTTYPE='D'
+            VALUE='NUMBER'
+        CASE PARTTYPE='S'
+            VALUE='STRING'
+        CASE PARTTYPE='N'
+            VALUE='NULL'
+        CASE PARTTYPE='B'
+            VALUE='BOOLEAN'
+        CASE 1
+            VALUE='UNKNOWN'
+    END CASE
+END ELSE
+    IF NODE="" THEN
+        VALUE="OBJECT"
+    END ELSE
+        VALUE="UNDEFINED" ;* NODE NOT FOUND!
+    END
+END
+IF WOBJ.DEBUG THEN PRINT "WOBJ: TYPE ACTION: ":NODE:" NODEPOS=":NODEPOS:" PARTPOS=":PARTPOS:" CHILDPOS=":CHILDPOS:" TYPE=":VALUE:" RERR=":RERR<2>
+RETURN
+*
+END

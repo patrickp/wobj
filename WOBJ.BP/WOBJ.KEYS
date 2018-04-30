@@ -1,0 +1,46 @@
+SUBROUTINE WOBJ.KEYS(ACTION,NODE,VALUE,RERR)
+**********************************************************************
+*
+* Copyright (C) 2017 Zumasys, Inc., All Rights Reserved
+*
+* Written by: Patrick Payne, Zumasys
+* Date: December 2017
+* Description: return list of elements in a json node in parsed object structure
+*
+**********************************************************************
+*
+INCLUDE WOBJ.INCLUDE
+*
+VALUE=""
+CALL WOBJ.FINDNODE(NODE,NODEPOS,PARTPOS,CHILDPOS,LASTNODE,RERR)
+*
+*IF WOBJ.DEBUG THEN PRINT "WOBJ.KEYS: NODEPOS=":NODEPOS:" PARTPOS=":PARTPOS:" LASTNODE=":LASTNODE:" RERR=":RERR<2>
+*
+IF NOT(NODEPOS) THEN
+    RERR=1
+    RERR<2>="Node not found" 
+    RETURN
+END
+IF NODE#"" AND NOT(PARTPOS) THEN
+    RERR=1
+    RERR<2>="Node not found" 
+    RETURN
+END
+IF NODE="" THEN
+    NODEPOS=1
+    CHILDPOS=1
+END
+IF NOT(CHILDPOS) THEN
+   RERR=1
+   RERR<2>="Node is not an object"
+   RETURN
+END
+NODETYPE=JSONOBJECT(JSONOBJECT$NODETYPE)<1,CHILDPOS>
+IF NODETYPE#"O" THEN
+   RERR=1
+   RERR<2>="Node is not an object"
+   RETURN
+END
+VALUE=JSONOBJECT(JSONOBJECT$NODEPARTS.KEY)<1,CHILDPOS>
+RETURN
+END
